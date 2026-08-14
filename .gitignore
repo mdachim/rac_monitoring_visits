@@ -1,0 +1,7 @@
+# Local and generated files
+__pycache__/
+*.py[cod]
+*.xlsx
+.DS_Store
+Thumbs.db
+.openai/site-source.tar.gz
