@@ -1064,11 +1064,17 @@ footer p { margin: 0; }
 
 @media (max-width: 460px) {
   body { padding: 9px; }
-  .site-header { min-height: 78px; padding: 13px 15px; }
-  .brand-mark { width: 40px; height: 40px; }
-  .brand-logo { width: min(230px, 65vw); }
+  .site-header { min-height: 0; padding: 14px 15px; }
+  .brand-block {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .brand-logo { width: min(210px, 75vw); }
   .brand-block strong { font-size: 18px; }
-  .brand-block > span { display: none; }
+  .brand-block > span { display: block; }
+  .brand-block small { margin-top: 2px; font-size: 11px; }
   .dashboard-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .timeline { padding: 15px; }
   .timeline-controls { gap: 6px; }

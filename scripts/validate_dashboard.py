@@ -98,8 +98,8 @@ def main() -> None:
     assert 'id="activeFilterBar"' in html
     assert 'id="downloadWorkbook"' in html and "Download XLSX" in html
     assert 'href="assets/downloads/rac-monitoring-visits-2026-07.xlsx"' in html
-    assert 'assets/css/styles.css?v=20260814b' in html
-    assert 'assets/js/app.js?v=20260814b' in html
+    assert 'assets/css/styles.css?v=20260814c' in html
+    assert 'assets/js/app.js?v=20260814c' in html
     assert 'id="racMap"' in html
     assert "map-placeholder" not in html
     assert "MLSP monthly demographics" in html
@@ -119,6 +119,7 @@ def main() -> None:
     assert "touch-action: none" in css
     assert ".timeline-download" in css
     assert re.search(r"\.site-header\s*\{[^}]*margin-bottom:\s*20px", css, re.DOTALL)
+    assert re.search(r"@media \(max-width:\s*460px\).*?\.brand-block > span\s*\{\s*display:\s*block", css, re.DOTALL)
     assert re.search(r"h2\s*\{[^}]*text-transform:\s*uppercase", css, re.DOTALL)
     assert re.search(r"\.data-table\s*\{[^}]*border-collapse:\s*separate", css, re.DOTALL)
     assert ".demographic-occupancy-track" in css and ".demographic-age-bar" in css
