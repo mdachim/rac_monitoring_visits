@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *.xlsx
+!assets/downloads/*.xlsx
 .DS_Store
 Thumbs.db
 .openai/site-source.tar.gz

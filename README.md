@@ -9,10 +9,12 @@ A GitHub Pages-ready dashboard for monthly Refugee Accommodation Centre (RAC) mo
 - `assets/js/app.js` — filters, calculations, visualisations and table interactions
 - `assets/data/dashboard.json` — generated browser-ready data (do not edit manually)
 - `assets/data/adm1 for PBI with Left Bank.json` — Moldova administrative boundary map
+- `assets/downloads/` — generated six-sheet monthly Excel downloads
 - `data/kobo_data.xlsx` — ACTED Kobo source export
 - `data/rac_demographics.xlsx` — MLSP demographic snapshots
 - `data/rac_map.xlsx` — RAC coordinates, matched by RAC ID
-- `scripts/build_dashboard_data.py` — rebuilds `dashboard.json` from the three source workbooks
+- `scripts/build_dashboard_data.py` — rebuilds `dashboard.json` and all monthly Excel downloads from the three source workbooks
+- `scripts/build_monthly_workbooks.py` — creates the styled six-sheet workbooks used by the download button
 
 ## Refreshing the dashboard data
 

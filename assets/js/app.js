@@ -23,6 +23,7 @@
     previousMonth: document.querySelector("#previousMonth"),
     nextMonth: document.querySelector("#nextMonth"),
     latestMonth: document.querySelector("#latestMonth"),
+    downloadWorkbook: document.querySelector("#downloadWorkbook"),
     tabs: [...document.querySelectorAll("[data-tab]")],
     views: [...document.querySelectorAll("[data-view]")],
     collectionWindow: document.querySelector("#collectionWindow"),
@@ -176,6 +177,10 @@
     elements.previousMonth.disabled = index === 0;
     elements.nextMonth.disabled = index === dataset.months.length - 1;
     elements.latestMonth.classList.toggle("active", index === dataset.months.length - 1);
+    const workbookName = `rac-monitoring-visits-${meta.id}.xlsx`;
+    elements.downloadWorkbook.href = `assets/downloads/${workbookName}`;
+    elements.downloadWorkbook.download = workbookName;
+    elements.downloadWorkbook.setAttribute("aria-label", `Download Excel workbook for ${formatMonth(meta.id)}`);
   }
 
   function renderFilterState() {

@@ -6,6 +6,8 @@ import json
 import re
 from pathlib import Path
 
+from openpyxl import load_workbook
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -53,6 +55,24 @@ def main() -> None:
     assert next(record for record in june if record["racId"] == "2")["raion"] == "Balti"
     assert data["months"][-1]["demographicsDate"] == "2026-07-20"
 
+    expected_sheets = ["Demographics", "Infrastructure", "NFI Needs", "Education & Catering", "Services", "Calendar"]
+    download_dir = ROOT / "assets" / "downloads"
+    workbook_files = sorted(download_dir.glob("rac-monitoring-visits-*.xlsx"))
+    assert len(workbook_files) == len(data["months"])
+    for month in data["months"]:
+        workbook_file = download_dir / f"rac-monitoring-visits-{month['id']}.xlsx"
+        assert workbook_file.exists() and workbook_file.stat().st_size > 12_000
+        workbook = load_workbook(workbook_file, read_only=False, data_only=False)
+        try:
+            assert workbook.sheetnames == expected_sheets
+            assert all(f"Reporting month: {month['id']}" in workbook[name]["A2"].value for name in expected_sheets)
+            assert workbook["Demographics"]["A4"].value == "RAC ID"
+            assert workbook["Infrastructure"]["C4"].value == "Room type"
+            assert workbook["Calendar"]["C4"].value == "Monday"
+            assert all(workbook[name].freeze_panes == "A5" for name in expected_sheets)
+        finally:
+            workbook.close()
+
     html = (ROOT / "index.html").read_text(encoding="utf-8")
     expected_tabs = {
         "Demographics",
@@ -76,6 +96,7 @@ def main() -> None:
     assert 'src="logos/blue-logo-Moldova.png"' in html
     assert ">Showing<" not in html
     assert 'id="activeFilterBar"' in html
+    assert 'id="downloadWorkbook"' in html and "Download XLSX" in html
     assert 'id="racMap"' in html
     assert "map-placeholder" not in html
     assert "MLSP monthly demographics" in html
@@ -93,6 +114,7 @@ def main() -> None:
     assert ".moldova-map" in css and ".moldova-region" in css and ".rac-point" in css
     assert ".map-controls" in css and ".map-help" in css
     assert "touch-action: none" in css
+    assert ".timeline-download" in css
     assert re.search(r"\.site-header\s*\{[^}]*margin-bottom:\s*20px", css, re.DOTALL)
     assert re.search(r"h2\s*\{[^}]*text-transform:\s*uppercase", css, re.DOTALL)
     assert re.search(r"\.data-table\s*\{[^}]*border-collapse:\s*separate", css, re.DOTALL)
@@ -104,6 +126,8 @@ def main() -> None:
     assert "Female (Kobo)" not in app and "Male (Kobo)" not in app
     assert 'record.demographicSource || "ACTED"' in app
     assert 'fetch("assets/data/dashboard.json")' in app
+    assert 'assets/downloads/${workbookName}' in app
+    assert 'rac-monitoring-visits-${meta.id}.xlsx' in app
     assert 'fetch("assets/data/adm1%20for%20PBI%20with%20Left%20Bank.json")' in app
     assert "decodeArc" in app and "stitchRing" in app and "racMapPoints" in app
     assert "mapMaxZoom = 8" in app and "zoomMap" in app and 'addEventListener("wheel"' in app

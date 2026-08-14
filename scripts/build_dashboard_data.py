@@ -21,6 +21,8 @@ from pathlib import Path
 
 import openpyxl
 
+from build_monthly_workbooks import build_monthly_workbooks, validate_workbooks
+
 
 ROOT = Path(__file__).resolve().parents[1]
 KOBO_FILE = ROOT / "data" / "kobo_data.xlsx"
@@ -504,9 +506,12 @@ def main() -> None:
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
     TARGET.write_text(f"{serialized}\n", encoding="utf-8")
+    workbook_outputs = build_monthly_workbooks(payload)
+    validate_workbooks(payload, workbook_outputs)
     print(
         f"Wrote {TARGET.relative_to(ROOT)} with {len(records)} ACTED RAC-month records, "
-        f"{len(demographics_records)} demographic records and {len(locations)} mapped RACs"
+        f"{len(demographics_records)} demographic records, {len(locations)} mapped RACs and "
+        f"{len(workbook_outputs)} monthly workbooks"
     )
 
 
