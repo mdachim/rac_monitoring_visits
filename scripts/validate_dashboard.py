@@ -63,6 +63,15 @@ def main() -> None:
         "Calendar",
     }
     assert all(f">{tab}</button>" in html for tab in expected_tabs)
+    assert html.index('class="dashboard-overview"') < html.index('class="dashboard-tabs"')
+    assert html.index('id="racMap"') < html.index('class="dashboard-tabs"')
+    assert html.index('class="dashboard-tabs"') < html.index('id="demographicsView"')
+    assert 'role="tablist"' in html and html.count('role="tabpanel"') == 6
+    assert 'class="panel-kicker"' not in html
+    overview = html[html.index('class="dashboard-overview"'):html.index('class="dashboard-tabs"')]
+    demographics_view = html[html.index('id="demographicsView"'):html.index('id="infrastructureView"')]
+    assert 'id="ageGenderChart"' in overview and 'id="raionChart"' in overview and 'id="racMap"' in overview
+    assert 'id="demographicsTable"' in demographics_view and 'id="racMap"' not in demographics_view
     assert "Collection in progress" not in html
     assert 'src="logos/blue-logo-Moldova.png"' in html
     assert ">Showing<" not in html
@@ -84,6 +93,10 @@ def main() -> None:
     assert ".moldova-map" in css and ".moldova-region" in css and ".rac-point" in css
     assert ".map-controls" in css and ".map-help" in css
     assert "touch-action: none" in css
+    assert re.search(r"\.site-header\s*\{[^}]*margin-bottom:\s*20px", css, re.DOTALL)
+    assert re.search(r"h2\s*\{[^}]*text-transform:\s*uppercase", css, re.DOTALL)
+    assert re.search(r"\.data-table\s*\{[^}]*border-collapse:\s*separate", css, re.DOTALL)
+    assert re.search(r"\.calendar-entry\s*\{[^}]*border-left:\s*2px solid var\(--blue\)", css, re.DOTALL)
     assert "leaflet" not in css.lower()
 
     app = (ROOT / "assets" / "js" / "app.js").read_text(encoding="utf-8")
@@ -98,6 +111,8 @@ def main() -> None:
     assert "13 + Math.sqrt(residents) * 1.1" in app
     assert "window.L" not in app and "tileLayer" not in app
     assert 'rac: (record) => record.racId === key' in app
+    show_view = app[app.index("function showView"):app.index("function renderPeriod")]
+    assert "activeFilter = null" not in show_view
     assert not (ROOT / "assets" / "js" / "data.js").exists()
     assert not (ROOT / "assets" / "map").exists()
 

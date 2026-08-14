@@ -22,15 +22,6 @@
         </div>
       </header>
 
-      <nav class="dashboard-tabs" aria-label="Dashboard topics">
-        <button class="dashboard-tab active" type="button" data-tab="demographics" aria-selected="true" aria-controls="demographicsView">Demographics</button>
-        <button class="dashboard-tab" type="button" data-tab="infrastructure" aria-selected="false" aria-controls="infrastructureView">Infrastructure</button>
-        <button class="dashboard-tab" type="button" data-tab="needs" aria-selected="false" aria-controls="needsView">NFI Needs</button>
-        <button class="dashboard-tab" type="button" data-tab="education" aria-selected="false" aria-controls="educationView">Education &amp; Catering</button>
-        <button class="dashboard-tab" type="button" data-tab="services" aria-selected="false" aria-controls="servicesView">Services</button>
-        <button class="dashboard-tab" type="button" data-tab="calendar" aria-selected="false" aria-controls="calendarView">Calendar</button>
-      </nav>
-
       <main id="main-content">
         <section class="timeline" aria-label="Reporting period timeline">
           <div class="timeline-heading">
@@ -69,16 +60,12 @@
           <button id="clearFilter" type="button">Clear selection</button>
         </div>
 
-        <section class="dashboard-view" id="demographicsView" data-view="demographics">
-          <h1 class="view-title">Demographics</h1>
-          <p class="view-subtitle">Population profile, disability inclusion and geographic distribution.</p>
-
+        <section class="dashboard-overview" aria-label="Population and geographic overview">
           <section class="demographics-layout">
             <div class="demographics-left">
               <article class="panel interactive-panel">
                 <div class="panel-heading">
                   <div>
-                    <p class="panel-kicker">Population profile</p>
                     <h2>Residents by age group</h2>
                   </div>
                   <p class="panel-source" id="demographicSourceNote"></p>
@@ -89,7 +76,6 @@
               <article class="panel interactive-panel">
                 <div class="panel-heading">
                   <div>
-                    <p class="panel-kicker">Geographic distribution</p>
                     <h2>Residents by raion</h2>
                   </div>
                 </div>
@@ -98,7 +84,6 @@
 
               <article class="panel metric-panel metric-panel-flat">
                 <div>
-                  <p class="panel-kicker">Inclusion</p>
                   <h2>Persons with disabilities</h2>
                 </div>
                 <div class="metric-inline">
@@ -111,7 +96,6 @@
             <aside class="panel rac-map-panel" aria-label="Map of Refugee Accommodation Centres">
               <div class="panel-heading map-heading">
                 <div>
-                  <p class="panel-kicker">Geographic distribution</p>
                   <h2>RAC locations</h2>
                 </div>
                 <p class="map-summary" id="mapSummary"></p>
@@ -119,83 +103,94 @@
               <div class="rac-map" id="racMap" aria-label="Map of RAC locations in Moldova"></div>
             </aside>
           </section>
+        </section>
 
+        <nav class="dashboard-tabs" aria-label="Detailed dashboard topics" role="tablist">
+          <button class="dashboard-tab active" type="button" role="tab" data-tab="demographics" aria-selected="true" aria-controls="demographicsView">Demographics</button>
+          <button class="dashboard-tab" type="button" role="tab" data-tab="infrastructure" aria-selected="false" aria-controls="infrastructureView">Infrastructure</button>
+          <button class="dashboard-tab" type="button" role="tab" data-tab="needs" aria-selected="false" aria-controls="needsView">NFI Needs</button>
+          <button class="dashboard-tab" type="button" role="tab" data-tab="education" aria-selected="false" aria-controls="educationView">Education &amp; Catering</button>
+          <button class="dashboard-tab" type="button" role="tab" data-tab="services" aria-selected="false" aria-controls="servicesView">Services</button>
+          <button class="dashboard-tab" type="button" role="tab" data-tab="calendar" aria-selected="false" aria-controls="calendarView">Calendar</button>
+        </nav>
+
+        <section class="dashboard-view" id="demographicsView" data-view="demographics" role="tabpanel">
           <article class="panel data-panel">
-            <div class="panel-heading"><div><p class="panel-kicker">Centre detail</p><h2>Demographic profile by RAC</h2></div></div>
+            <div class="panel-heading"><div><h2>Demographic profile by RAC</h2></div></div>
             <div class="data-table-wrap" id="demographicsTable"></div>
           </article>
         </section>
 
-        <section class="dashboard-view" id="infrastructureView" data-view="infrastructure" hidden>
+        <section class="dashboard-view" id="infrastructureView" data-view="infrastructure" role="tabpanel" hidden>
           <h1 class="view-title">Infrastructure</h1>
           <p class="view-subtitle">Room arrangements, sanitation, safety, child-friendly spaces and accessibility.</p>
 
           <section class="content-grid two-panel-grid">
             <article class="panel">
-              <div class="panel-heading"><div><p class="panel-kicker">Accommodation setup</p><h2>RACs by room type</h2></div></div>
+              <div class="panel-heading"><div><h2>RACs by room type</h2></div></div>
               <div class="category-chart" id="roomTypeChart"></div>
             </article>
             <article class="panel">
-              <div class="panel-heading"><div><p class="panel-kicker">Room conditions</p><h2>RACs reporting adequate conditions</h2></div></div>
+              <div class="panel-heading"><div><h2>RACs reporting adequate conditions</h2></div></div>
               <div class="status-chart" id="roomStatusChart"></div>
             </article>
           </section>
 
           <article class="panel data-panel">
-            <div class="panel-heading"><div><p class="panel-kicker">Centre detail</p><h2>Infrastructure available in RACs</h2></div></div>
+            <div class="panel-heading"><div><h2>Infrastructure available in RACs</h2></div></div>
             <div class="data-table-wrap" id="infrastructureTable"></div>
           </article>
         </section>
 
-        <section class="dashboard-view" id="needsView" data-view="needs" hidden>
+        <section class="dashboard-view" id="needsView" data-view="needs" role="tabpanel" hidden>
           <h1 class="view-title">NFI Needs</h1>
           <p class="view-subtitle">Level of material need and the most frequently requested items.</p>
 
           <section class="content-grid two-panel-grid">
             <article class="panel">
-              <div class="panel-heading"><div><p class="panel-kicker">Level of need</p><h2>RACs by number of needs reported</h2></div></div>
+              <div class="panel-heading"><div><h2>RACs by number of needs reported</h2></div></div>
               <div class="category-chart" id="needLevelChart"></div>
             </article>
             <article class="panel">
-              <div class="panel-heading"><div><p class="panel-kicker">Priority items</p><h2>Items needed by RACs</h2></div><span class="panel-badge">Centres</span></div>
+              <div class="panel-heading"><div><h2>Items needed by RACs</h2></div><span class="panel-badge">Centres</span></div>
               <div class="needs-list" id="needsChart"></div>
             </article>
           </section>
 
           <article class="panel data-panel">
-            <div class="panel-heading"><div><p class="panel-kicker">Centre detail</p><h2>Needs reported by RAC</h2></div></div>
+            <div class="panel-heading"><div><h2>Needs reported by RAC</h2></div></div>
             <div class="data-table-wrap" id="needsTable"></div>
           </article>
         </section>
 
-        <section class="dashboard-view" id="educationView" data-view="education" hidden>
+        <section class="dashboard-view" id="educationView" data-view="education" role="tabpanel" hidden>
           <h1 class="view-title">Education and Catering</h1>
           <p class="view-subtitle">School attendance, education access and food services available to residents.</p>
 
           <section class="content-grid two-panel-grid">
             <article class="panel">
-              <div class="panel-heading"><div><p class="panel-kicker">Education</p><h2>Children attending education</h2></div></div>
+              <div class="panel-heading"><div><h2>Children attending education</h2></div></div>
               <div class="category-chart" id="attendanceChart"></div>
             </article>
             <article class="panel">
-              <div class="panel-heading"><div><p class="panel-kicker">Catering</p><h2>Food service arrangements</h2></div></div>
+              <div class="panel-heading"><div><h2>Food service arrangements</h2></div></div>
               <div class="category-chart" id="foodServiceChart"></div>
             </article>
           </section>
 
           <article class="panel data-panel">
-            <div class="panel-heading"><div><p class="panel-kicker">Centre detail</p><h2>Education and catering by RAC</h2></div></div>
+            <div class="panel-heading"><div><h2>Education and catering by RAC</h2></div></div>
             <div class="data-table-wrap" id="educationTable"></div>
           </article>
         </section>
 
-        <section class="dashboard-view" id="servicesView" data-view="services" hidden>
+        <section class="dashboard-view" id="servicesView" data-view="services" role="tabpanel" hidden>
           <h1 class="view-title">Services</h1>
           <p class="view-subtitle">Availability and reported need for protection and assistance services.</p>
 
           <article class="panel">
             <div class="panel-heading">
-              <div><p class="panel-kicker">Service status</p><h2>Availability across responding RACs</h2></div>
+              <div><h2>Availability across responding RACs</h2></div>
               <div class="legend">
                 <span><i class="legend-swatch available"></i>Available</span>
                 <span><i class="legend-swatch needed"></i>Needed</span>
@@ -206,17 +201,17 @@
           </article>
 
           <article class="panel data-panel">
-            <div class="panel-heading"><div><p class="panel-kicker">Centre detail</p><h2>Service availability by RAC</h2></div></div>
+            <div class="panel-heading"><div><h2>Service availability by RAC</h2></div></div>
             <div class="data-table-wrap" id="servicesTable"></div>
           </article>
         </section>
 
-        <section class="dashboard-view" id="calendarView" data-view="calendar" hidden>
+        <section class="dashboard-view" id="calendarView" data-view="calendar" role="tabpanel" hidden>
           <h1 class="view-title">Calendar</h1>
           <p class="view-subtitle">Recurring weekly activities and the organisations delivering them in RACs.</p>
 
           <article class="panel data-panel calendar-panel">
-            <div class="panel-heading"><div><p class="panel-kicker">Weekly schedule</p><h2>Calendar of activities in RACs</h2></div></div>
+            <div class="panel-heading"><div><h2>Calendar of activities in RACs</h2></div></div>
             <div class="calendar-grid" id="calendarGrid"></div>
           </article>
         </section>

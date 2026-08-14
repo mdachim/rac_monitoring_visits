@@ -157,7 +157,6 @@
 
   function showView(name) {
     activeTab = name;
-    activeFilter = null;
     elements.tabs.forEach((tab) => {
       const active = tab.dataset.tab === name;
       tab.classList.toggle("active", active);
