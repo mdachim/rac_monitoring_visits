@@ -797,6 +797,114 @@ h2 {
 .number-cell { text-align: right !important; }
 .location-cell { min-width: 220px; }
 
+.demographic-table { min-width: 940px; }
+.demographic-table th { padding: 0; }
+.demographic-table th:nth-child(1) { width: 78px; }
+.demographic-table th:nth-child(2) { width: 112px; }
+.demographic-table th:nth-child(3) { width: 190px; }
+.demographic-table th:nth-child(4) { width: 150px; }
+.demographic-table th:nth-child(5) { width: 220px; }
+.demographic-table th:nth-child(6) { width: 90px; }
+.demographic-table th:nth-child(7) { width: 180px; }
+
+.demographic-sort {
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.demographic-sort:hover,
+.demographic-sort:focus-visible { color: var(--blue); }
+.demographic-sort:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.demographic-sort span { margin-left: 3px; font-size: 8px; opacity: 0.45; }
+.demographic-address {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demographic-occupancy,
+.demographic-age { display: flex; flex-direction: column; gap: 4px; }
+.demographic-occupancy { min-width: 110px; }
+.demographic-occupancy > div:first-child { color: var(--blue-darkest); font-variant-numeric: tabular-nums; }
+.demographic-occupancy strong { font-weight: 800; }
+.demographic-occupancy > div:first-child span { color: #8a97a1; font-size: 10px; }
+.demographic-occupancy-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #edf2f5;
+}
+.demographic-occupancy-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+}
+
+.demographic-age { min-width: 180px; }
+.demographic-age-bar {
+  display: flex;
+  height: 15px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #edf2f5;
+}
+.demographic-age-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1px;
+  color: #fff;
+  font-size: 8.5px;
+  font-weight: 800;
+}
+.demographic-age-segment.child,
+.demographic-legend-swatch.child { background: #0072bc; }
+.demographic-age-segment.adult,
+.demographic-legend-swatch.adult { background: #7cb9e8; }
+.demographic-age-segment.older,
+.demographic-legend-swatch.older { background: #18375f; }
+.demographic-age-segment.small { color: transparent; }
+.demographic-age-values {
+  display: flex;
+  gap: 7px;
+  color: #8a97a1;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.demographic-age-values strong { color: var(--ink-2); font-weight: 700; }
+.demographic-age-values i { font-style: normal; }
+.demographic-pwd { display: inline-flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
+.demographic-pwd strong { color: var(--blue-darkest); }
+.demographic-pwd span { color: #8a97a1; font-size: 9.5px; }
+.demographic-source { display: inline-flex; align-items: center; gap: 5px; color: #8a97a1; font-size: 9.5px; white-space: nowrap; }
+.demographic-source i { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; }
+.demographic-source i.mlsp { background: var(--blue); }
+.demographic-source i.acted { background: var(--yellow); }
+.demographic-source strong { color: var(--ink-2); font-weight: 800; }
+.demographic-table-caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  align-items: center;
+  margin-top: 10px;
+  color: #8a97a1;
+  font-size: 9.5px;
+}
+.demographic-table-caption > span { display: inline-flex; align-items: center; gap: 4px; }
+.demographic-legend-swatch { width: 7px; height: 7px; border-radius: 1px; }
+.demographic-table-hint { margin-left: 4px; }
+
 .status-pill {
   display: inline-flex;
   padding: 3px 7px;

@@ -67,6 +67,7 @@
   const mapMaxZoom = 8;
   let activeTab = "demographics";
   let activeFilter = null;
+  let demographicSort = { key: "racId", direction: 1 };
   let mapShapes = null;
   let mapProjection = null;
   let mapSvg = null;
@@ -232,9 +233,80 @@
 
     renderMap(base, filtered);
 
-    const headers = ["RAC ID", "Raion", "Address", "Capacity", "Hosted", "0-17", "18-59", "60+", "PwD", "Primary source", "Data date"];
-    const rows = filtered.slice().sort(sortRacs).map((record) => [record.racId, record.raion || "—", raw(escapeHtml(record.address || "—"), "location-cell"), numeric(record.capacity), numeric(record.hosted), numeric(record.demographicProfile?.["0-17 years"]), numeric(record.demographicProfile?.["18-59 years"]), numeric(record.demographicProfile?.["60+ years"]), numeric(record.pwd), record.demographicSource || "ACTED", formatDate(record.demographicDate)]);
-    elements.demographicsTable.innerHTML = tableHtml(headers, rows);
+    renderDemographicTable(filtered);
+  }
+
+  function renderDemographicTable(records) {
+    if (!records.length) {
+      elements.demographicsTable.innerHTML = '<p class="calendar-empty">No RACs match the current selection.</p>';
+      return;
+    }
+
+    const columns = [
+      { key: "racId", label: "RAC ID", value: (record) => Number(record.racId) || 0 },
+      { key: "raion", label: "Raion", value: (record) => record.raion || "" },
+      { key: "address", label: "Address", value: (record) => record.address || "" },
+      { key: "occupancy", label: "Occupancy", value: (record) => Number(record.hosted) || 0 },
+      { key: "age", label: "Age composition", value: (record) => Number(record.hosted) || 0 },
+      { key: "pwd", label: "PwD", value: (record) => Number(record.pwd) || 0 },
+      { key: "source", label: "Source", value: (record) => `${record.demographicSource || "ACTED"} ${record.demographicDate || ""}` },
+    ];
+    const column = columns.find((item) => item.key === demographicSort.key) || columns[0];
+    const rows = records.slice().sort((a, b) => {
+      const left = column.value(a);
+      const right = column.value(b);
+      const comparison = typeof left === "number"
+        ? left - right
+        : String(left).localeCompare(String(right), "en", { numeric: true, sensitivity: "base" });
+      return comparison * demographicSort.direction;
+    });
+
+    const headings = columns.map(({ key, label }) => {
+      const active = demographicSort.key === key;
+      const direction = active && demographicSort.direction === 1 ? "ascending" : active ? "descending" : "none";
+      const arrow = active ? (demographicSort.direction === 1 ? "▲" : "▼") : "↕";
+      return `<th aria-sort="${direction}"><button class="demographic-sort" type="button" data-demographic-sort="${key}">${escapeHtml(label)} <span aria-hidden="true">${arrow}</span></button></th>`;
+    }).join("");
+
+    const body = rows.map((record) => {
+      const capacity = Number(record.capacity) || 0;
+      const hosted = Number(record.hosted) || 0;
+      const occupancy = capacity ? ratio(hosted, capacity) : 0;
+      const occupancyWidth = Math.min(Math.max(occupancy, 0), 100);
+      const child = Number(record.demographicProfile?.["0-17 years"]) || 0;
+      const adult = Number(record.demographicProfile?.["18-59 years"]) || 0;
+      const older = Number(record.demographicProfile?.["60+ years"]) || 0;
+      const ageTotal = child + adult + older;
+      const pwd = Number(record.pwd) || 0;
+      const source = record.demographicSource || "ACTED";
+      const sourceClass = source.toLowerCase() === "mlsp" ? "mlsp" : "acted";
+      const ageSegment = (value, className, label) => {
+        if (!value || !ageTotal) return "";
+        const width = ratio(value, ageTotal);
+        return `<span class="demographic-age-segment ${className}${width < 10 ? " small" : ""}" style="width:${width}%" title="${escapeHtml(label)}: ${formatNumber(value)}">${width >= 10 ? formatNumber(value) : ""}</span>`;
+      };
+      return `<tr>
+        <td>${escapeHtml(record.racId)}</td>
+        <td>${escapeHtml(record.raion || "—")}</td>
+        <td class="demographic-address" title="${escapeHtml(record.address || "—")}">${escapeHtml(record.address || "—")}</td>
+        <td>
+          <div class="demographic-occupancy">
+            <div><strong>${formatNumber(hosted)} / ${capacity ? formatNumber(capacity) : "—"}</strong>${capacity ? ` <span>(${percentFormat.format(occupancy)}%)</span>` : ""}</div>
+            <div class="demographic-occupancy-track"><span style="width:${occupancyWidth}%"></span></div>
+          </div>
+        </td>
+        <td>
+          <div class="demographic-age">
+            <div class="demographic-age-bar">${ageSegment(child, "child", "0–17")}${ageSegment(adult, "adult", "18–59")}${ageSegment(older, "older", "60+")}</div>
+            <div class="demographic-age-values"><strong>${formatNumber(child)}</strong><i>·</i><strong>${formatNumber(adult)}</strong><i>·</i><strong>${formatNumber(older)}</strong></div>
+          </div>
+        </td>
+        <td><span class="demographic-pwd"><strong>${formatNumber(pwd)}</strong><span>(${percentFormat.format(ratio(pwd, hosted))}%)</span></span></td>
+        <td><span class="demographic-source"><i class="${sourceClass}"></i><strong>${escapeHtml(source)}</strong><span>· ${escapeHtml(formatDate(record.demographicDate))}</span></span></td>
+      </tr>`;
+    }).join("");
+
+    elements.demographicsTable.innerHTML = `<table class="data-table demographic-table"><thead><tr>${headings}</tr></thead><tbody>${body}</tbody></table>`;
   }
 
   function prepareMap() {
@@ -693,6 +765,16 @@
     render();
   });
   document.addEventListener("click", (event) => {
+    const demographicSortButton = event.target.closest("[data-demographic-sort]");
+    if (demographicSortButton) {
+      const key = demographicSortButton.dataset.demographicSort;
+      demographicSort = {
+        key,
+        direction: demographicSort.key === key ? demographicSort.direction * -1 : 1,
+      };
+      render();
+      return;
+    }
     const target = event.target.closest("[data-filter-type]");
     if (!target) return;
     const type = target.dataset.filterType;

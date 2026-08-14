@@ -98,8 +98,8 @@ def main() -> None:
     assert 'id="activeFilterBar"' in html
     assert 'id="downloadWorkbook"' in html and "Download XLSX" in html
     assert 'href="assets/downloads/rac-monitoring-visits-2026-07.xlsx"' in html
-    assert 'assets/css/styles.css?v=20260814' in html
-    assert 'assets/js/app.js?v=20260814' in html
+    assert 'assets/css/styles.css?v=20260814b' in html
+    assert 'assets/js/app.js?v=20260814b' in html
     assert 'id="racMap"' in html
     assert "map-placeholder" not in html
     assert "MLSP monthly demographics" in html
@@ -121,11 +121,13 @@ def main() -> None:
     assert re.search(r"\.site-header\s*\{[^}]*margin-bottom:\s*20px", css, re.DOTALL)
     assert re.search(r"h2\s*\{[^}]*text-transform:\s*uppercase", css, re.DOTALL)
     assert re.search(r"\.data-table\s*\{[^}]*border-collapse:\s*separate", css, re.DOTALL)
+    assert ".demographic-occupancy-track" in css and ".demographic-age-bar" in css
     assert re.search(r"\.calendar-entry\s*\{[^}]*border-left:\s*2px solid var\(--blue\)", css, re.DOTALL)
     assert "leaflet" not in css.lower()
 
     app = (ROOT / "assets" / "js" / "app.js").read_text(encoding="utf-8")
     assert "baseDemographicRecords" in app
+    assert "renderDemographicTable" in app and "data-demographic-sort" in app
     assert "Female (Kobo)" not in app and "Male (Kobo)" not in app
     assert 'record.demographicSource || "ACTED"' in app
     assert 'fetch("assets/data/dashboard.json")' in app
