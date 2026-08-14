@@ -97,6 +97,9 @@ def main() -> None:
     assert ">Showing<" not in html
     assert 'id="activeFilterBar"' in html
     assert 'id="downloadWorkbook"' in html and "Download XLSX" in html
+    assert 'href="assets/downloads/rac-monitoring-visits-2026-07.xlsx"' in html
+    assert 'assets/css/styles.css?v=20260814' in html
+    assert 'assets/js/app.js?v=20260814' in html
     assert 'id="racMap"' in html
     assert "map-placeholder" not in html
     assert "MLSP monthly demographics" in html
@@ -142,7 +145,7 @@ def main() -> None:
 
     references = re.findall(r'(?:src|href)="([^"#]+)"', html)
     local_references = [reference for reference in references if not reference.startswith(("http://", "https://"))]
-    missing = [reference for reference in local_references if not (ROOT / reference).exists()]
+    missing = [reference for reference in local_references if not (ROOT / reference.split("?", 1)[0]).exists()]
     assert not missing, f"Missing local assets: {missing}"
 
     print(
