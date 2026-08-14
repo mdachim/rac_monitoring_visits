@@ -1,6 +1,6 @@
 # RAC Monitoring Visits Dashboard
 
-A GitHub Pages-ready dashboard for monthly Refugee Accommodation Centre (RAC) monitoring data from Kobo and MLSP.
+A GitHub Pages-ready dashboard for monthly Refugee Accommodation Centre (RAC) monitoring data from ACTED and MLSP.
 
 ## Project structure
 
@@ -8,7 +8,8 @@ A GitHub Pages-ready dashboard for monthly Refugee Accommodation Centre (RAC) mo
 - `assets/css/styles.css` — visual design and responsive layout
 - `assets/js/app.js` — filters, calculations, visualisations and table interactions
 - `assets/data/dashboard.json` — generated browser-ready data (do not edit manually)
-- `data/kobo_data.xlsx` — Kobo source export
+- `assets/data/adm1 for PBI with Left Bank.json` — Moldova administrative boundary map
+- `data/kobo_data.xlsx` — ACTED Kobo source export
 - `data/rac_demographics.xlsx` — MLSP demographic snapshots
 - `data/rac_map.xlsx` — RAC coordinates, matched by RAC ID
 - `scripts/build_dashboard_data.py` — rebuilds `dashboard.json` from the three source workbooks
@@ -23,7 +24,7 @@ python scripts\build_dashboard_data.py
 
 The dashboard is intended to be served through GitHub Pages. For local preview, run `python -m http.server` in the project folder and open the displayed local URL. Opening `index.html` directly through `file://` will not load the JSON file.
 
-MLSP data take precedence for capacity, hosted population, broad age profile and disability figures. Within each calendar month, only the latest MLSP snapshot date is used. RACs or months missing from that snapshot fall back to Kobo. Raion names always come from Kobo. RAC coordinates are rendered on an interactive Leaflet map.
+MLSP data take precedence for capacity, hosted population, broad age profile and disability figures. Within each calendar month, only the latest MLSP snapshot date is used. RACs or months missing from that snapshot fall back to ACTED. Capacity is carried forward from the latest MLSP value available for each RAC up to the selected month. Raion names always come from ACTED. RAC coordinates are plotted over the local Moldova administrative boundary file; no external map service is required.
 
 ## Reporting-month convention
 

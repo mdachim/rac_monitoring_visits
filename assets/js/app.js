@@ -2,17 +2,18 @@
   "use strict";
 
   let dataset;
+  let moldovaTopology;
   try {
-    const response = await fetch("assets/data/dashboard.json");
-    if (!response.ok) throw new Error(`Dashboard data request failed with ${response.status}`);
-    dataset = await response.json();
+    const [dataResponse, mapResponse] = await Promise.all([
+      fetch("assets/data/dashboard.json"),
+      fetch("assets/data/adm1%20for%20PBI%20with%20Left%20Bank.json"),
+    ]);
+    if (!dataResponse.ok) throw new Error(`Dashboard data request failed with ${dataResponse.status}`);
+    if (!mapResponse.ok) throw new Error(`Moldova boundary request failed with ${mapResponse.status}`);
+    [dataset, moldovaTopology] = await Promise.all([dataResponse.json(), mapResponse.json()]);
   } catch (error) {
     console.error(error);
     document.body.innerHTML = "<p style='padding:2rem'>The dashboard data could not be loaded. Please open the site through GitHub Pages or a local web server.</p>";
-    return;
-  }
-  if (typeof window.L === "undefined") {
-    document.body.innerHTML = "<p style='padding:2rem'>The interactive map library could not be loaded.</p>";
     return;
   }
 
@@ -59,11 +60,17 @@
   const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
   const calendarTimes = ["08:00–10:00", "10:00–12:00", "14:00–16:00", "16:00–18:00"];
   const locationLookup = new Map((dataset.locations || []).map((location) => [location.racId, location]));
+  const mapWidth = 620;
+  const mapHeight = 720;
+  const mapMinZoom = 1;
+  const mapMaxZoom = 8;
   let activeTab = "demographics";
   let activeFilter = null;
-  let racMap = null;
-  let racMarkerLayer = null;
-  let fittedMapMonth = "";
+  let mapShapes = null;
+  let mapProjection = null;
+  let mapSvg = null;
+  let mapView = { zoom: 1, x: 0, y: 0 };
+  let mapDrag = null;
 
   function parseIso(value) {
     return new Date(`${value}T00:00:00Z`);
@@ -160,9 +167,6 @@
       view.hidden = view.dataset.view !== name;
     });
     render();
-    if (name === "demographics" && racMap) {
-      requestAnimationFrame(() => racMap.invalidateSize({ pan: false }));
-    }
   }
 
   function renderPeriod() {
@@ -214,8 +218,8 @@
 
     const meta = monthMeta(selectedMonthId());
     elements.demographicSourceNote.textContent = meta.demographicsFromMLSP
-      ? `MLSP snapshot ${formatDate(meta.demographicsDate)} · Kobo fills ${Math.max(meta.demographicsCoverage - meta.demographicsFromMLSP, 0)} RAC${meta.demographicsCoverage - meta.demographicsFromMLSP === 1 ? "" : "s"}`
-      : "Kobo data · no MLSP snapshot for this month";
+      ? `MLSP snapshot ${formatDate(meta.demographicsDate)} · ACTED fills ${Math.max(meta.demographicsCoverage - meta.demographicsFromMLSP, 0)} RAC${meta.demographicsCoverage - meta.demographicsFromMLSP === 1 ? "" : "s"}`
+      : "ACTED data · capacity from latest available MLSP snapshot";
 
     const raionSource = recordsForChart("raion", base, filtered);
     const raions = new Map();
@@ -224,62 +228,208 @@
 
     renderMap(base, filtered);
 
-    const headers = ["RAC ID", "Raion", "Address", "Capacity", "Hosted", "0-17", "18-59", "60+", "PwD", "Female (Kobo)", "Male (Kobo)", "Primary source", "Data date"];
-    const rows = filtered.slice().sort(sortRacs).map((record) => [record.racId, record.raion || "—", raw(escapeHtml(record.address || "—"), "location-cell"), numeric(record.capacity), numeric(record.hosted), numeric(record.demographicProfile?.["0-17 years"]), numeric(record.demographicProfile?.["18-59 years"]), numeric(record.demographicProfile?.["60+ years"]), numeric(record.pwd), numeric(record.female), numeric(record.male), record.demographicSource || "Kobo", formatDate(record.demographicDate)]);
+    const headers = ["RAC ID", "Raion", "Address", "Capacity", "Hosted", "0-17", "18-59", "60+", "PwD", "Primary source", "Data date"];
+    const rows = filtered.slice().sort(sortRacs).map((record) => [record.racId, record.raion || "—", raw(escapeHtml(record.address || "—"), "location-cell"), numeric(record.capacity), numeric(record.hosted), numeric(record.demographicProfile?.["0-17 years"]), numeric(record.demographicProfile?.["18-59 years"]), numeric(record.demographicProfile?.["60+ years"]), numeric(record.pwd), record.demographicSource || "ACTED", formatDate(record.demographicDate)]);
     elements.demographicsTable.innerHTML = tableHtml(headers, rows);
   }
 
-  function initializeMap() {
-    if (racMap) return;
-    const bounds = dataset.mapBounds;
-    racMap = window.L.map(elements.map, {
-      minZoom: 6,
-      maxZoom: 18,
-      maxBounds: [[44.8, 25.8], [49.2, 31.2]],
-      maxBoundsViscosity: 0.75,
-      scrollWheelZoom: true,
-      zoomControl: true,
+  function prepareMap() {
+    if (mapShapes && mapProjection) return;
+    const transform = moldovaTopology.transform || { scale: [1, 1], translate: [0, 0] };
+    const arcCache = new Map();
+
+    function decodeArc(arcIndex) {
+      const reversed = arcIndex < 0;
+      const index = reversed ? ~arcIndex : arcIndex;
+      if (!arcCache.has(index)) {
+        let x = 0;
+        let y = 0;
+        const coordinates = moldovaTopology.arcs[index].map(([deltaX, deltaY]) => {
+          x += deltaX;
+          y += deltaY;
+          return [
+            x * transform.scale[0] + transform.translate[0],
+            y * transform.scale[1] + transform.translate[1],
+          ];
+        });
+        arcCache.set(index, coordinates);
+      }
+      const coordinates = arcCache.get(index);
+      return reversed ? coordinates.slice().reverse() : coordinates;
+    }
+
+    function stitchRing(arcIndexes) {
+      const ring = [];
+      arcIndexes.forEach((arcIndex, position) => {
+        const arc = decodeArc(arcIndex);
+        ring.push(...(position ? arc.slice(1) : arc));
+      });
+      return ring;
+    }
+
+    const polygons = [];
+    Object.values(moldovaTopology.objects || {}).forEach((object) => {
+      const geometries = object.type === "GeometryCollection" ? object.geometries : [object];
+      geometries.forEach((geometry) => {
+        const name = geometry.properties?.Raion_name || geometry.properties?.ADM1_EN || "Moldova";
+        const polygonArcs = geometry.type === "MultiPolygon" ? geometry.arcs : [geometry.arcs];
+        polygonArcs.forEach((rings) => polygons.push({ name, rings: rings.map(stitchRing) }));
+      });
     });
-    window.L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      maxZoom: 20,
-      subdomains: "abcd",
-    }).addTo(racMap);
-    racMarkerLayer = window.L.layerGroup().addTo(racMap);
-    racMap.fitBounds([[bounds.south, bounds.west], [bounds.north, bounds.east]], { animate: false });
+
+    const allPoints = polygons.flatMap((polygon) => polygon.rings.flat());
+    const meanLatitude = allPoints.reduce((total, point) => total + point[1], 0) / allPoints.length;
+    const longitudeFactor = Math.cos(meanLatitude * Math.PI / 180);
+    const projected = allPoints.map(([longitude, latitude]) => [longitude * longitudeFactor, latitude]);
+    const minX = Math.min(...projected.map((point) => point[0]));
+    const maxX = Math.max(...projected.map((point) => point[0]));
+    const minY = Math.min(...projected.map((point) => point[1]));
+    const maxY = Math.max(...projected.map((point) => point[1]));
+    const padding = 28;
+    const scale = Math.min((mapWidth - padding * 2) / (maxX - minX), (mapHeight - padding * 2) / (maxY - minY));
+    const drawnWidth = (maxX - minX) * scale;
+    const drawnHeight = (maxY - minY) * scale;
+    const offsetX = (mapWidth - drawnWidth) / 2;
+    const offsetY = (mapHeight - drawnHeight) / 2;
+
+    mapProjection = ([longitude, latitude]) => ({
+      x: offsetX + (longitude * longitudeFactor - minX) * scale,
+      y: offsetY + (maxY - latitude) * scale,
+    });
+    mapShapes = polygons.map((polygon) => ({
+      name: polygon.name,
+      path: polygon.rings.map((ring) => ring.map((point, index) => {
+        const projectedPoint = mapProjection(point);
+        return `${index ? "L" : "M"}${projectedPoint.x.toFixed(1)} ${projectedPoint.y.toFixed(1)}`;
+      }).join(" ") + " Z").join(" "),
+    }));
+
+    elements.map.innerHTML = `
+      <div class="map-controls" aria-label="Map zoom controls">
+        <button type="button" id="mapZoomIn" aria-label="Zoom in">+</button>
+        <button type="button" id="mapZoomOut" aria-label="Zoom out">−</button>
+        <button type="button" id="mapZoomReset" aria-label="Reset map view">Reset</button>
+      </div>
+      <svg class="moldova-map" viewBox="0 0 620 720" role="img" aria-label="Moldova administrative map with RAC locations" preserveAspectRatio="xMidYMid meet">
+        <g class="moldova-regions">${mapShapes.map((shape) => `<path class="moldova-region" d="${shape.path}"><title>${escapeHtml(shape.name)}</title></path>`).join("")}</g>
+        <g class="rac-map-points" id="racMapPoints"></g>
+      </svg>
+      <span class="map-help">Scroll or use controls to zoom · drag map to pan</span>`;
+    mapSvg = elements.map.querySelector(".moldova-map");
+    initializeMapInteractions();
+  }
+
+  function clampMapView() {
+    const width = mapWidth / mapView.zoom;
+    const height = mapHeight / mapView.zoom;
+    mapView.x = Math.max(0, Math.min(mapWidth - width, mapView.x));
+    mapView.y = Math.max(0, Math.min(mapHeight - height, mapView.y));
+  }
+
+  function applyMapView() {
+    if (!mapSvg) return;
+    clampMapView();
+    const width = mapWidth / mapView.zoom;
+    const height = mapHeight / mapView.zoom;
+    mapSvg.setAttribute("viewBox", `${mapView.x.toFixed(2)} ${mapView.y.toFixed(2)} ${width.toFixed(2)} ${height.toFixed(2)}`);
+    mapSvg.querySelectorAll(".rac-point").forEach((point) => {
+      const circle = point.querySelector("circle");
+      const textLabel = point.querySelector("text");
+      circle.setAttribute("r", (Number(circle.dataset.baseRadius) / mapView.zoom).toFixed(2));
+      textLabel.style.fontSize = `${(Number(textLabel.dataset.baseFontSize) / mapView.zoom).toFixed(2)}px`;
+    });
+    elements.map.querySelector("#mapZoomOut").disabled = mapView.zoom <= mapMinZoom;
+    elements.map.querySelector("#mapZoomIn").disabled = mapView.zoom >= mapMaxZoom;
+  }
+
+  function zoomMap(nextZoom, anchor = null) {
+    const previousWidth = mapWidth / mapView.zoom;
+    const previousHeight = mapHeight / mapView.zoom;
+    const focus = anchor || { x: mapView.x + previousWidth / 2, y: mapView.y + previousHeight / 2 };
+    const relativeX = (focus.x - mapView.x) / previousWidth;
+    const relativeY = (focus.y - mapView.y) / previousHeight;
+    mapView.zoom = Math.max(mapMinZoom, Math.min(mapMaxZoom, nextZoom));
+    const nextWidth = mapWidth / mapView.zoom;
+    const nextHeight = mapHeight / mapView.zoom;
+    mapView.x = focus.x - relativeX * nextWidth;
+    mapView.y = focus.y - relativeY * nextHeight;
+    applyMapView();
+  }
+
+  function eventMapPoint(event) {
+    const point = mapSvg.createSVGPoint();
+    point.x = event.clientX;
+    point.y = event.clientY;
+    return point.matrixTransform(mapSvg.getScreenCTM().inverse());
+  }
+
+  function initializeMapInteractions() {
+    elements.map.querySelector("#mapZoomIn").addEventListener("click", () => zoomMap(mapView.zoom * 1.5));
+    elements.map.querySelector("#mapZoomOut").addEventListener("click", () => zoomMap(mapView.zoom / 1.5));
+    elements.map.querySelector("#mapZoomReset").addEventListener("click", () => {
+      mapView = { zoom: 1, x: 0, y: 0 };
+      applyMapView();
+    });
+    mapSvg.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      zoomMap(mapView.zoom * (event.deltaY < 0 ? 1.35 : 1 / 1.35), eventMapPoint(event));
+    }, { passive: false });
+    mapSvg.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      zoomMap(mapView.zoom * 1.6, eventMapPoint(event));
+    });
+    mapSvg.addEventListener("pointerdown", (event) => {
+      if (event.target.closest(".rac-point") || mapView.zoom <= mapMinZoom) return;
+      const matrix = mapSvg.getScreenCTM();
+      mapDrag = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        startX: mapView.x,
+        startY: mapView.y,
+        scaleX: matrix.a,
+        scaleY: matrix.d,
+      };
+      mapSvg.setPointerCapture(event.pointerId);
+      mapSvg.classList.add("is-dragging");
+    });
+    mapSvg.addEventListener("pointermove", (event) => {
+      if (!mapDrag || event.pointerId !== mapDrag.pointerId) return;
+      mapView.x = mapDrag.startX - (event.clientX - mapDrag.clientX) / mapDrag.scaleX;
+      mapView.y = mapDrag.startY - (event.clientY - mapDrag.clientY) / mapDrag.scaleY;
+      applyMapView();
+    });
+    const stopDragging = (event) => {
+      if (!mapDrag || event.pointerId !== mapDrag.pointerId) return;
+      mapDrag = null;
+      mapSvg.classList.remove("is-dragging");
+    };
+    mapSvg.addEventListener("pointerup", stopDragging);
+    mapSvg.addEventListener("pointercancel", stopDragging);
+    applyMapView();
   }
 
   function renderMap(base, filtered) {
-    initializeMap();
+    prepareMap();
     const source = recordsForChart("rac", base, filtered);
     const mapped = source.filter((record) => locationLookup.has(record.racId));
-    const markerBounds = [];
-    racMarkerLayer.clearLayers();
-    mapped.forEach((record) => {
+    const pointsLayer = elements.map.querySelector("#racMapPoints");
+    pointsLayer.innerHTML = mapped.map((record) => {
       const location = locationLookup.get(record.racId);
-      const selected = activeFilter?.type === "rac" && activeFilter.key === record.racId;
-      const marker = window.L.circleMarker([location.latitude, location.longitude], {
-        radius: Math.min(16, 6 + Math.sqrt(Number(record.hosted) || 0) / 2),
-        color: "#ffffff",
-        weight: selected ? 4 : 2,
-        fillColor: selected ? "#103f68" : "#2879bd",
-        fillOpacity: 0.92,
-      });
-      marker.bindTooltip(`<strong>RAC ${escapeHtml(record.racId)}</strong><br>${escapeHtml(record.raion || "Raion not specified")} · ${formatNumber(record.hosted)} residents`, { direction: "top", offset: [0, -6] });
-      marker.on("click", () => {
-        activeFilter = activeFilter?.type === "rac" && activeFilter.key === record.racId
-          ? null
-          : makeFilter("rac", record.racId, `RAC ${record.racId}`);
-        render();
-      });
-      marker.addTo(racMarkerLayer);
-      markerBounds.push([location.latitude, location.longitude]);
-    });
-    if (mapped.length && fittedMapMonth !== selectedMonthId()) {
-      racMap.fitBounds(markerBounds, { animate: false, maxZoom: 9, padding: [28, 28] });
-      fittedMapMonth = selectedMonthId();
-    }
-    elements.mapSummary.textContent = `${mapped.length} of ${source.length} RACs mapped · marker size shows residents`;
+      const point = mapProjection([location.longitude, location.latitude]);
+      const residents = Math.max(0, Number(record.hosted) || 0);
+      const radius = Math.min(28, 13 + Math.sqrt(residents) * 1.1);
+      const fontSize = String(record.racId).length > 2 ? 8 : 9.5;
+      const label = `RAC ${record.racId}, ${record.raion || "raion not specified"}: ${formatNumber(record.hosted)} residents`;
+      return `
+        <g class="rac-point${selectedClass("rac", record.racId)}" transform="translate(${point.x.toFixed(1)} ${point.y.toFixed(1)})" tabindex="0" role="button" aria-label="${escapeHtml(label)}" ${filterAttributes("rac", record.racId, `RAC ${record.racId}`)}>
+          <circle r="${radius.toFixed(1)}" data-base-radius="${radius.toFixed(1)}"></circle>
+          <text y="0.35em" data-base-font-size="${fontSize}">${escapeHtml(record.racId)}</text>
+          <title>${escapeHtml(label)}</title>
+        </g>`;
+    }).join("");
+    applyMapView();
+    elements.mapSummary.textContent = `${mapped.length} of ${source.length} RACs mapped · bubble size = residents`;
   }
 
   function sortRacs(a, b) {
@@ -546,6 +696,11 @@
     const label = target.dataset.filterLabel || key;
     activeFilter = activeFilter?.type === type && activeFilter.key === key ? null : makeFilter(type, key, label);
     render();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (!event.target.matches(".rac-point[data-filter-type]") || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    event.target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 
   initializeControls();

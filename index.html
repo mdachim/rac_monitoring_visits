@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="Monthly Refugee Accommodation Centre monitoring dashboard for Moldova." />
     <title>RAC Monitoring Visits</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9D/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="assets/css/styles.css" />
-    <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script defer src="assets/js/app.js"></script>
   </head>
   <body>
@@ -18,7 +16,7 @@
         <div class="brand-block" aria-label="RAC Monitoring">
           <img class="brand-logo" src="logos/blue-logo-Moldova.png" alt="UNHCR Moldova" />
           <span>
-            <strong>Monitoring Visits</strong>
+            <strong>RAC Monitoring Visits</strong>
             <small>Refugee Accommodation Centres · Moldova</small>
           </span>
         </div>
@@ -118,7 +116,7 @@
                 </div>
                 <p class="map-summary" id="mapSummary"></p>
               </div>
-              <div class="rac-map" id="racMap" role="application" aria-label="Interactive map of RAC locations. Use the plus and minus controls to zoom."></div>
+              <div class="rac-map" id="racMap" aria-label="Map of RAC locations in Moldova"></div>
             </aside>
           </section>
 
@@ -225,7 +223,7 @@
       </main>
 
       <footer>
-        <p>Sources: MLSP monthly demographics (preferred when available) and Kobo monitoring visits.</p>
+        <p>Sources: MLSP monthly demographics (preferred when available) and ACTED monitoring visits.</p>
         <p>Figures reflect reported conditions during the selected collection wave.</p>
       </footer>
     </div>

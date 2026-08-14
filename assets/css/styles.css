@@ -370,30 +370,104 @@ input:focus-visible {
   position: relative;
   width: 100%;
   height: 640px;
+  display: grid;
   flex: none;
   overflow: hidden;
+  place-items: center;
   border: 1px solid var(--line-strong);
   border-radius: 11px;
-  background: #e8f1ed;
+  background: #eaf3f7;
 }
-.rac-map.leaflet-container { font-family: inherit; }
-.rac-map .leaflet-bar { border: 0; box-shadow: var(--shadow); }
-.rac-map .leaflet-control-zoom a {
-  border-color: var(--line);
-  color: var(--blue-darkest);
+.moldova-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
 }
-.rac-map .leaflet-control-zoom a:hover { background: var(--blue-pale); }
-.rac-map .leaflet-tooltip {
-  border: 0;
-  border-radius: 6px;
-  background: rgba(12, 49, 71, 0.94);
-  box-shadow: 0 3px 10px rgba(8, 61, 99, 0.25);
+.moldova-map.is-dragging { cursor: grabbing; }
+.moldova-region {
+  fill: #f8fbfa;
+  fill-rule: evenodd;
+  stroke: #9db8b2;
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+.moldova-region:hover { fill: #edf6f3; }
+.rac-point {
   color: #fff;
-  font-family: inherit;
-  font-size: 10px;
-  line-height: 1.35;
+  cursor: pointer;
+  outline: none;
 }
-.rac-map .leaflet-tooltip-top::before { border-top-color: rgba(12, 49, 71, 0.94); }
+.rac-point circle {
+  fill: var(--blue-dark);
+  stroke: #fff;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 2px 3px rgba(8, 61, 99, 0.34));
+}
+.rac-point text {
+  fill: currentColor;
+  font-family: inherit;
+  font-weight: 900;
+  pointer-events: none;
+  text-anchor: middle;
+}
+.rac-point:hover circle,
+.rac-point:focus-visible circle,
+.rac-point.is-filter-selected circle {
+  fill: var(--blue-darkest);
+  stroke: #ffdd67;
+  stroke-width: 4;
+}
+
+.map-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+.map-controls button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: #fff;
+  color: var(--blue-darkest);
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 900;
+}
+.map-controls button:last-child {
+  border-right: 0;
+  font-size: 10px;
+}
+.map-controls button:hover:not(:disabled),
+.map-controls button:focus-visible { background: var(--blue-pale); }
+.map-controls button:disabled {
+  color: #a8b7bf;
+  cursor: default;
+}
+.map-help {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  z-index: 2;
+  padding: 4px 7px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink-3);
+  font-size: 9px;
+  pointer-events: none;
+}
 
 .raion-scroll {
   height: 220px;

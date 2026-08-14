@@ -1,8 +1,10 @@
 """Build the browser-ready RAC monitoring dataset.
 
-Kobo remains the source for monitoring-round coverage and all thematic tabs.
+ACTED monitoring data remain the source for round coverage and all thematic tabs.
 For demographic measures, the latest MLSP snapshot within each calendar month
-is preferred by RAC ID; Kobo fills RACs or months absent from that snapshot.
+is preferred by RAC ID; ACTED fills RACs or months absent from that snapshot.
+Capacity is always carried forward from the latest MLSP value available for the
+same RAC on or before the selected reporting month.
 RAC coordinates come from rac_map.xlsx and are matched only by RAC ID.
 """
 
@@ -26,9 +28,13 @@ MLSP_FILE = ROOT / "data" / "rac_demographics.xlsx"
 MAP_FILE = ROOT / "data" / "rac_map.xlsx"
 TARGET = ROOT / "assets" / "data" / "dashboard.json"
 
+# ACTED used 573 once for the Florilor site that MLSP and the map identify as 574.
+# Keep the source record, but inherit capacity from the matching MLSP RAC history.
+CAPACITY_RAC_ALIASES = {"573": "574"}
+
 
 def report_month(value: datetime) -> str:
-    """Assign Kobo visits on days 1-7 to the preceding reporting month."""
+    """Assign ACTED visits on days 1-7 to the preceding reporting month."""
     year, month = value.year, value.month
     if value.day <= 7:
         month -= 1
@@ -175,7 +181,13 @@ def kobo_profile(record: dict) -> dict:
     }
 
 
-def mlsp_demographic_record(base: dict, values: dict, month: str, snapshot_date: datetime) -> dict:
+def mlsp_demographic_record(
+    base: dict,
+    values: dict,
+    month: str,
+    snapshot_date: datetime,
+    carried_capacity,
+) -> dict:
     record = dict(base)
     hosted = values["hosted"] if values["hosted"] is not None else number(base.get("hosted"))
     age0to2 = values["age0to2"] if values["age0to2"] is not None else 0
@@ -186,7 +198,7 @@ def mlsp_demographic_record(base: dict, values: dict, month: str, snapshot_date:
     record.update(
         {
             "month": month,
-            "capacity": values["capacity"] if values["capacity"] is not None else base.get("capacity"),
+            "capacity": values["capacity"] if values["capacity"] is not None else carried_capacity,
             "hosted": hosted,
             "children": children,
             "age18to59": age18to59,
@@ -389,7 +401,7 @@ def main() -> None:
             },
         }
         record["demographicProfile"] = kobo_profile(record)
-        record["demographicSource"] = "Kobo"
+        record["demographicSource"] = "ACTED"
         record["demographicDate"] = record["visitDate"]
         record["mlspDetails"] = None
         records.append(record)
@@ -401,6 +413,19 @@ def main() -> None:
 
     demographics_records = []
     month_ids = sorted({record["month"] for record in records})
+    snapshot_month_ids = sorted(mlsp_snapshots)
+    latest_mlsp_capacity = {}
+    capacity_by_month = {}
+    snapshot_position = 0
+    for month in month_ids:
+        while snapshot_position < len(snapshot_month_ids) and snapshot_month_ids[snapshot_position] <= month:
+            snapshot_month = snapshot_month_ids[snapshot_position]
+            for uid, values in mlsp_snapshots[snapshot_month]["rows"].items():
+                if values["capacity"] is not None:
+                    latest_mlsp_capacity[uid] = values["capacity"]
+            snapshot_position += 1
+        capacity_by_month[month] = dict(latest_mlsp_capacity)
+
     for month in month_ids:
         kobo_month = {record["racId"]: record for record in records if record["month"] == month}
         snapshot = mlsp_snapshots.get(month)
@@ -419,11 +444,22 @@ def main() -> None:
                         "otherGender": optional_number(base.get("otherGender")),
                     }
                 )
-                demographics_records.append(mlsp_demographic_record(base, values, month, snapshot["date"]))
+                demographics_records.append(
+                    mlsp_demographic_record(
+                        base,
+                        values,
+                        month,
+                        snapshot["date"],
+                        capacity_by_month[month].get(uid),
+                    )
+                )
                 used_ids.add(uid)
         for uid, record in kobo_month.items():
             if uid not in used_ids:
-                demographics_records.append(dict(record))
+                fallback = dict(record)
+                capacity_uid = CAPACITY_RAC_ALIASES.get(uid, uid)
+                fallback["capacity"] = capacity_by_month[month].get(capacity_uid)
+                demographics_records.append(fallback)
 
     months = []
     for month in month_ids:
@@ -450,10 +486,10 @@ def main() -> None:
     latest["preliminary"] = latest["coverage"] < previous["coverage"] and (date.today() - latest_visit).days <= 7
     payload = {
         "meta": {
-            "source": "Kobo monitoring visits with MLSP demographic precedence",
-            "demographicsSource": "Latest monthly MLSP snapshot by RAC ID; Kobo fallback",
+            "source": "ACTED monitoring visits with MLSP demographic precedence",
+            "demographicsSource": "Latest monthly MLSP snapshot by RAC ID; ACTED fallback",
             "mapSource": "rac_map.xlsx coordinates matched by RAC ID",
-            "reportingRule": "Kobo visits dated on days 1-7 are assigned to the preceding reporting month. MLSP snapshots use calendar months.",
+            "reportingRule": "ACTED visits dated on days 1-7 are assigned to the preceding reporting month. MLSP snapshots use calendar months.",
             "latestMonth": latest["id"],
             "asOf": latest["to"],
             "recordCount": len(records),
@@ -463,14 +499,13 @@ def main() -> None:
         "records": records,
         "demographicsRecords": demographics_records,
         "locations": locations,
-        "mapBounds": {"west": 26.45, "south": 45.35, "east": 30.65, "north": 48.55},
     }
 
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
     TARGET.write_text(f"{serialized}\n", encoding="utf-8")
     print(
-        f"Wrote {TARGET.relative_to(ROOT)} with {len(records)} Kobo RAC-month records, "
+        f"Wrote {TARGET.relative_to(ROOT)} with {len(records)} ACTED RAC-month records, "
         f"{len(demographics_records)} demographic records and {len(locations)} mapped RACs"
     )
 
